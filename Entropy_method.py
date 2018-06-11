@@ -22,7 +22,7 @@ start=time.time()
 for i in range(120,121):
     File.append('IM'+str(i))
                                         
-#def image_feature(image, image_size):
+def image_feature(image, image_size):
     #center = 256
     #location_x = np.absolute(np.array([np.arange(image_size).tolist() for i in range(image_size)])-center)/center *(image != 0)
     #location_y = np.absolute(np.array([(i*np.ones(image_size)).tolist() for i in range(image_size)])-center)/center *(image != 0)
@@ -42,9 +42,7 @@ for i in range(120,121):
 def local_feature(image,add):
     feature = []
     
-    
     boundary_y = np.zeros((len(image),add))
-    #I_x = np.ga 
     image = np.append(boundary_y,image,axis = 1)
     image = np.append(image,boundary_y,axis = 1)
 
@@ -70,7 +68,7 @@ def local_feature(image,add):
             #feature.append((np.append(np.log10(window+1e-1) ,tmp)))
             feature.append(tmp)
     return np.array(feature)
-def Gaussian_Mixture_Model(feature_matrix,cluster): # x,y,I,Ix,Iy,Ixy,Ixx,Iyy,k,det,r,theta
+def entropy_method(feature_matrix,cluster): # x,y,I,Ix,Iy,Ixy,Ixx,Iyy,k,det,r,theta
     #feature_5 = local_feature(feature_2)
     
     feature_extra = local_feature(feature_matrix,4)
@@ -105,21 +103,43 @@ def Gaussian_Mixture_Model(feature_matrix,cluster): # x,y,I,Ix,Iy,Ixy,Ixx,Iyy,k,
     Y = solve_matrix_lsq(X_train,gmm_mean)
     return [gmm_mean,Y]
     
-def solve_matrix_lsq(X,M): #solve X = M*Y
-    Y = []
-    for i in range(0,len(X)):
-        #fun = lambda x : np.linalg.norm(np.multiply(M,x) - np.transpose(X[i]))
-        cons = ({'type': 'eq', 'fun': lambda x:  np.sum(x)-1 })
-        # bnds = ((0, None), (0, None))
-        x0 = np.transpose(np.zeros(len(X)))
-        x0[0] = 1
-        bnds = tuple((0,1) for i in range(len(X[0])))
-        lb = np.zeros(len(M[0]))
-        ub = lb +1
-        tmp = opt.lsq_linear(M,X[i],bounds = (lb,ub))
-        Y.append(tmp.x)
-    return np.transpose(Y)
+def initial_membership_mat(data_points,cluster_numbers):
+    membership_mat = np.random.rand(cluster_numbers,data_points)
+    for columns in range(0,len(membership_mat[0])):
+        membership_mat[:,i] /= np.sum(membership_mat[:,i])
+    return membership_mat
 
+def select_data_cluster(data,membership_mat,cluster_numbers,diffusion_matrix):
+    data_pt_cluster = [[] for i in range(cluster)]
+    diffusion_cluster = [[] for i in range(cluster)]
+    index_for_append_diffu = [[] for i in range(cluster)]
+    for data_index in range(len(membership_mat[0])): #對於每一個點
+        for cluster_index in range(cluster_numbers): #看每一個叢集可能性
+            if np.max(membership_mat[:,i]) == membership_mat[data_index][membership_mat]: #挑出叢集可能性最大的叢集index
+                data_pt_cluster[cluster_index].append(data[data_index]) #加入資料點到該叢集中
+                index_for_append_diffu[cluster_index].append(data_index) #加入資料點的index到叢集
+                break
+    for cluster_index in range(cluster_numbers): #對於每一個叢集
+        for i in range(len(index_for_append_diffu[cluster_index])):#對於每一個叢集中的點
+            while j>=i: #作排列組合，抓出所有對應的相關
+                diffusion_cluster[cluster_index].append(diffusion_matrix[i][j]) #把diffusion distance加入到該叢集
+    length_for_cluster = []
+    for cluster_index in range(cluster_numbers): #對於每一個叢集
+        length_for_cluster[cluster_index].append(len(data_pt_cluster[cluster_index])) #取得所有叢集的大小
+    return [cluster,diffusion_cluster]
+
+def compute_diffusion_matrix(data):
+    N = len(data) #資料點的長度
+    diffusion_matrix = np.zeros((N,N))
+    for i in range(len(data)): #對於每一個點
+        while j >= i: #對於上三角部分
+            diffusion_matrix[i][j] = np.exp(-1*np.linalg.norm(data[i]-data[j]))
+            diffusion_matrix[j][i] = diffusion_matrix[i][j] #對稱矩陣
+    return diffusion_matrix
+
+def weighting_matrix(cluster)
+    
+            
 def atalas(input):
     return([input[0:256,0:256],input[0:256,256:512],input[256:512,0:256],input[256:512,256:512]])
 def main(file):
@@ -130,34 +150,14 @@ def main(file):
     pixel_size=len(ds.pixel_array)
      
     ds_pixel = ds.pixel_array
-    #phi = (initial_level_set(pixel_size,390,130,20)) #390 130 20
-
-    #image_feature_data = image_feature(ds_pixel,pixel_size)
-
+    
     #####################
     # NUMBER OF CLUSTER #
     ##################### 
     CLUSTER = 3
 
     
-    process = Gaussian_Mixture_Model(ds_pixel,CLUSTER)
-    Y = process[1]
-    print(process[0])
-    label_local = []
     
-    for i in range(len(Y[0])):
-        tmp = (Y[:,i]).tolist() 
-        label_local.append(tmp.index(max(tmp)))#+chart_no*CLUSTER)
-    label_local = np.reshape(label_local,(512,512))
-
-    for i in range(CLUSTER*0,CLUSTER*1):
-        image = ds_pixel*((label_local==i).astype(np.int))
-        plt.suptitle("The label" + str(i))
-        
-        plt.imsave("Cluster" + str(i)+".png",image,cmap = plt.cm.bone,  dpi = 1500)
-    
-
-
 
 
 start=time.time()
